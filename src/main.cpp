@@ -33,7 +33,8 @@ int main()
   uWS::Hub h;
 
   PID pid;
-  // TODO: Initialize the pid variable.
+  // Initialize the pid variable.
+  pid.Init(0.11, 0.01, 0.0);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -48,6 +49,10 @@ int main()
         if (event == "telemetry") {
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
+          // restart if get too far off track
+          if (fabs(cte) > 2.2) {
+            pid.Restart(ws);
+          }
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
@@ -57,15 +62,26 @@ int main()
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+          pid.UpdateError(cte);
           
+          steer_value = pid.calculateAngle();
+          //std::cout << pid.Kp << "\t" << pid.Ki << "\t" << pid.Kd << std::endl;
+          //std::cout << pid.p_error << "\t" << pid.i_error << "\t" << pid.d_error << std::endl;
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          //std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = 0.2;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          // Twiddle params
+          int curr_steps = pid.getSteps();
+          //std::cout << curr_steps << std::endl;
+          if (curr_steps % pid.twiddle_interval == 0) {
+             std::cout << pid.Kp_ << "\t" << pid.Kd_ << "\t" << pid.Ki_ << std::endl;
+             pid.TwiddleParams();
+          }
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

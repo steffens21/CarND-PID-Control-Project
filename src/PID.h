@@ -1,3 +1,4 @@
+#include <uWS/uWS.h>
 #ifndef PID_H
 #define PID_H
 
@@ -10,12 +11,27 @@ public:
   double i_error;
   double d_error;
 
+  double abs_err;
+
   /*
   * Coefficients
   */ 
-  double Kp;
-  double Ki;
-  double Kd;
+  double Kp_;
+  double Ki_;
+  double Kd_;
+
+  double dp_p;
+  double dp_i;
+  double dp_d;
+
+  int steps;
+  int getSteps();
+
+  int twiddle_interval;
+  int twiddle_step;
+  bool last_twiddle_up;
+  bool first_twiddle;
+  float best_err;
 
   /*
   * Constructor
@@ -41,6 +57,18 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
+  /*
+  * Calculate the steering angle for a step
+  */
+  double calculateAngle();
+
+  /*
+  * Twiddle method
+  */
+  void TwiddleParams();
+
+  void Restart(uWS::WebSocket<uWS::SERVER> ws);
 };
 
 #endif /* PID_H */
