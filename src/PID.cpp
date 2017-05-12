@@ -87,18 +87,18 @@ void PID::TwiddleParams() {
   else if (last_twiddle_up == false) {
     // decrease adjustment amounts
     if (twiddle_step % 3 == 0) {
-      dp_p *= 0.9;
       Kp_ += dp_p;
+      dp_p *= 0.9;
       std::cout << "decreased dp_p to " << dp_p << std::endl;
     }
     if (twiddle_step % 3 == 1) {
-      dp_d *= 0.9;
       Kd_ += dp_d;
+      dp_d *= 0.9;
       std::cout << "decreased dp_d to " << dp_d << std::endl;
     }
     if (twiddle_step % 3 == 2) {
-      dp_i *= 0.9;
       Ki_ += dp_i;
+      dp_i *= 0.9;
       std::cout << "decreased dp_i to " << dp_i << std::endl;
     }
     twiddle_step += 1;  
