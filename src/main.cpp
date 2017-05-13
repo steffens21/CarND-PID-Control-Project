@@ -12,6 +12,14 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
+// If set to true we use a twiddle algorithm to improve the parameter settings
+const bool TWIDDLE_MODE = false;
+// If set to true the simulator will restart if the car goes of track
+// This is good for not having to restart manually,
+// it can however confuse the twiddle algorithm a bit since
+// the simulator restarts on one of the easiest parts of the tracks.
+const bool RESTART_MODE = false;
+
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -34,7 +42,8 @@ int main()
 
   PID pid;
   // Initialize the pid variable.
-  pid.Init(0.11, 0.01, 0.0);
+  // The parameter value have been optimized using the twiddle algorithm
+  pid.Init(0.15, 0.6, 0.0);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -50,35 +59,37 @@ int main()
           // j[1] is the data JSON object
           double cte = std::stod(j[1]["cte"].get<std::string>());
           // restart if get too far off track
-          if (fabs(cte) > 2.2) {
+          if (fabs(cte) > 2.4 && RESTART_MODE) {
+            // Improvement idea: Before restarting we should
+            // increase the pid.total_error such that going off
+            // track is heavily punished.  This will help the twiddle
+            // algorithm
             pid.Restart(ws);
           }
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
           /*
-          * TODO: Calcuate steering value here, remember the steering value is
+          * Calcuate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
           pid.UpdateError(cte);
-          
+
           steer_value = pid.calculateAngle();
-          //std::cout << pid.Kp << "\t" << pid.Ki << "\t" << pid.Kd << std::endl;
-          //std::cout << pid.p_error << "\t" << pid.i_error << "\t" << pid.d_error << std::endl;
           // DEBUG
           //std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          //std::cout << pid.Kp_ << "\t" << pid.Ki_ << "\t" << pid.Kd_ << std::endl;
+          //std::cout << pid.p_error << "\t" << pid.i_error << "\t" << pid.d_error << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = 0.2;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           // Twiddle params
-          int curr_steps = pid.getSteps();
-          //std::cout << curr_steps << std::endl;
-          if (curr_steps % pid.twiddle_interval == 0) {
-             std::cout << pid.Kp_ << "\t" << pid.Kd_ << "\t" << pid.Ki_ << std::endl;
+          if (TWIDDLE_MODE && pid.getSteps() % pid.twiddle_interval == 0) {
+             //std::cout << pid.Kp_ << "\t" << pid.Kd_ << "\t" << pid.Ki_ << std::endl;
              pid.TwiddleParams();
           }
           //std::cout << msg << std::endl;
