@@ -15,13 +15,13 @@ void PID::Init(double Kp, double Kd, double Ki) {
   Kd_ = Kd;
   Ki_ = Ki;
   steps = 0;
-  twiddle_interval = 1000;
+  twiddle_interval = 2500;
   twiddle_step = -1;
   last_twiddle_up = false;
   first_twiddle = true;
   dp_p = 0.01;
-  dp_d = 0.005;
-  dp_i = 0.0005;
+  dp_d = 0.02;
+  dp_i = 0.000001;
   best_err = 1.0e6;
   abs_err = 0;
 }
@@ -102,7 +102,7 @@ void PID::TwiddleParams() {
       std::cout << "decreased dp_i to " << dp_i << std::endl;
     }
     twiddle_step += 1;  
-    std::cout << "Reset to Kp: " << Kp_ << " Kd: " << Kd_ << " Ki: " << Ki_ << " best err: " << best_err << " curr err" << current_err << std::endl;
+    std::cout << "Reset to Kp: " << Kp_ << " Kd: " << Kd_ << " Ki: " << Ki_ << " best err: " << best_err << " curr err: " << current_err << std::endl;
   }
 
   // twiddle param up  
@@ -136,8 +136,12 @@ void PID::TwiddleParams() {
   first_twiddle = false;
 }
 
-void PID::Restart(uWS::WebSocket<uWS::SERVER> ws){
+void PID::Restart(uWS::WebSocket<uWS::SERVER> ws) {
   std::string reset_msg = "42[\"reset\",{}]";
   ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT);
+}
+
+void PID::PunishOffTrack() {
+  abs_err += 1e6;
 }
 

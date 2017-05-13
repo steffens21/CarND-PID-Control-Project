@@ -67,7 +67,14 @@ public:
   * Twiddle method
   */
   void TwiddleParams();
-
+  
+  /*
+  * Method to increase abs_error significantly when car goes off track
+  */
+  void PunishOffTrack();
+  /*
+  * Method to restart simulator when car goes off track
+  */
   void Restart(uWS::WebSocket<uWS::SERVER> ws);
 };
 

@@ -18,6 +18,8 @@ const bool TWIDDLE_MODE = false;
 // This is good for not having to restart manually,
 // it can however confuse the twiddle algorithm a bit since
 // the simulator restarts on one of the easiest parts of the tracks.
+// To avoid this issue we add a high punishment value to the total
+// error before we restart.
 const bool RESTART_MODE = false;
 
 // Checks if the SocketIO event has JSON data.
@@ -43,7 +45,8 @@ int main()
   PID pid;
   // Initialize the pid variable.
   // The parameter value have been optimized using the twiddle algorithm
-  pid.Init(0.15, 0.6, 0.0);
+  //pid.Init(0.175165, 1.20412, 0.0);
+  pid.Init(0.175165, 1.50412, 0.0);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -60,10 +63,11 @@ int main()
           double cte = std::stod(j[1]["cte"].get<std::string>());
           // restart if get too far off track
           if (fabs(cte) > 2.4 && RESTART_MODE) {
-            // Improvement idea: Before restarting we should
+            // Before restarting we should
             // increase the pid.total_error such that going off
             // track is heavily punished.  This will help the twiddle
             // algorithm
+            pid.PunishOffTrack();
             pid.Restart(ws);
           }
           double speed = std::stod(j[1]["speed"].get<std::string>());
@@ -85,7 +89,7 @@ int main()
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.2;
+          msgJson["throttle"] = 0.3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           // Twiddle params
           if (TWIDDLE_MODE && pid.getSteps() % pid.twiddle_interval == 0) {
